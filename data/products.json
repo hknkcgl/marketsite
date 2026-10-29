@@ -1,0 +1,162 @@
+[
+  {
+    "sku": "SEB-001",
+    "name": "Çanakkale Tarla Domatesi",
+    "category": "Taze Sebzeler",
+    "price": 48.00,
+    "unit": "kg",
+    "stock": 45,
+    "image": "assets/images/products/SEB-001.jpg",
+    "description": "Doğal tarla hasadı, mis kokulu ve etli yerli domates."
+  },
+  {
+    "sku": "SEB-002",
+    "name": "Çengelköy Çıtır Salatalık",
+    "category": "Taze Sebzeler",
+    "price": 35.00,
+    "unit": "kg",
+    "stock": 30,
+    "image": "assets/images/products/SEB-002.jpg",
+    "description": "İnce kabuklu, taze ve sulu Çengelköy tipi salatalık."
+  },
+  {
+    "sku": "SEB-003",
+    "name": "Köy Biberi (Tatlı Çarliston)",
+    "category": "Taze Sebzeler",
+    "price": 55.00,
+    "unit": "kg",
+    "stock": 25,
+    "image": "assets/images/products/SEB-003.jpg",
+    "description": "Kızartmalık ve salatalık taptaze tatlı köy biberi."
+  },
+  {
+    "sku": "SEB-004",
+    "name": "Ödemiş Sarı Patates",
+    "category": "Taze Sebzeler",
+    "price": 22.00,
+    "unit": "kg",
+    "stock": 80,
+    "image": "assets/images/products/SEB-004.jpg",
+    "description": "Yemeklik ve kızartmalık lezzetli taze sarı patates."
+  },
+  {
+    "sku": "SEB-005",
+    "name": "Amasya Kuru Soğan",
+    "category": "Taze Sebzeler",
+    "price": 18.00,
+    "unit": "kg",
+    "stock": 65,
+    "image": "assets/images/products/SEB-005.jpg",
+    "description": "Sert, sulu ve dayanıklı kışlık yemeklik kuru soğan."
+  },
+  {
+    "sku": "MEY-001",
+    "name": "Amasya Çiçek Elması",
+    "category": "Mevsim Meyveleri",
+    "price": 52.00,
+    "unit": "kg",
+    "stock": 40,
+    "image": "assets/images/products/MEY-001.jpg",
+    "description": "Kütür kütür, kokulu ve tatlı meşhur Amasya elması."
+  },
+  {
+    "sku": "MEY-002",
+    "name": "İthal Sarı Muz",
+    "category": "Mevsim Meyveleri",
+    "price": 85.00,
+    "unit": "kg",
+    "stock": 20,
+    "image": "assets/images/products/MEY-002.jpg",
+    "description": "Dolgun, tatlı ve taze 1. kalite ithal muz."
+  },
+  {
+    "sku": "MEY-003",
+    "name": "Tarla Çileği (Kutu)",
+    "category": "Mevsim Meyveleri",
+    "price": 65.00,
+    "unit": "kutu",
+    "stock": 15,
+    "image": "assets/images/products/MEY-003.jpg",
+    "description": "500 gr özel kutusunda mis kokulu taze bahçe çileği."
+  },
+  {
+    "sku": "MEY-004",
+    "name": "Bursa Deveci Armudu",
+    "category": "Mevsim Meyveleri",
+    "price": 60.00,
+    "unit": "kg",
+    "stock": 0,
+    "image": "assets/images/products/MEY-004.jpg",
+    "description": "Sulu ve yumuşak tatlı deveci armut (Stok bittiği için otomatik gizlenir)."
+  },
+  {
+    "sku": "YES-001",
+    "name": "Taze Köy Maydanozu",
+    "category": "Taze Yeşillikler",
+    "price": 15.00,
+    "unit": "demet",
+    "stock": 50,
+    "image": "assets/images/products/YES-001.jpg",
+    "description": "Sabah toplanmış, bol yapraklı ve canlı taze maydanoz."
+  },
+  {
+    "sku": "YES-002",
+    "name": "Çıtır Kıvırcık Marul",
+    "category": "Taze Yeşillikler",
+    "price": 25.00,
+    "unit": "adet",
+    "stock": 25,
+    "image": "assets/images/products/YES-002.jpg",
+    "description": "Büyük boy, yıkanmaya hazır taze çıtır göbek marul."
+  },
+  {
+    "sku": "YES-003",
+    "name": "Taze Bahçe Rokası",
+    "category": "Taze Yeşillikler",
+    "price": 15.00,
+    "unit": "demet",
+    "stock": 35,
+    "image": "assets/images/products/YES-003.jpg",
+    "description": "Hafif acımtırak ve lezzetli taze yeşil roka."
+  },
+  {
+    "sku": "YES-004",
+    "name": "Taze Bahçe Nanesi",
+    "category": "Taze Yeşillikler",
+    "price": 15.00,
+    "unit": "demet",
+    "stock": 0,
+    "image": "assets/images/products/YES-004.jpg",
+    "description": "Kokusu üzerinde ferah nane (Stok bittiği için otomatik gizlenir)."
+  },
+  {
+    "sku": "NAR-001",
+    "name": "Finike Sıkmalık Portakal",
+    "category": "Narenciye & Egzotik",
+    "price": 32.00,
+    "unit": "kg",
+    "stock": 60,
+    "image": "assets/images/products/NAR-001.jpg",
+    "description": "Bol sulu ve tatlı meşhur Finike portakalı."
+  },
+  {
+    "sku": "NAR-002",
+    "name": "Sulu Yatak Limon",
+    "category": "Narenciye & Egzotik",
+    "price": 42.00,
+    "unit": "kg",
+    "stock": 40,
+    "image": "assets/images/products/NAR-002.jpg",
+    "description": "İnce kabuklu, bol sulu 1. sınıf yerli limon."
+  },
+  {
+    "sku": "NAR-003",
+    "name": "Olgun İthal Avokado",
+    "category": "Narenciye & Egzotik",
+    "price": 45.00,
+    "unit": "adet",
+    "stock": 18,
+    "image": "assets/images/products/NAR-003.jpg",
+    "description": "Yemeye hazır, krema kıvamında yumuşak taze avokado."
+  }
+]

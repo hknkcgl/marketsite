@@ -1,0 +1,12 @@
+{
+  "name": "yildirimlar-manav",
+  "version": "1.0.0",
+  "description": "Yıldırımlar Manav - Statik ve WhatsApp Entegreli Sipariş Vitrini",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx serve -l 3000 ."
+  },
+  "keywords": ["manav", "e-commerce", "whatsapp", "static", "jamstack"],
+  "author": "Yıldırımlar Manav",
+  "license": "MIT"
+}

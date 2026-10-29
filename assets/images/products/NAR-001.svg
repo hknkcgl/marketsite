@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <defs>
+    <radialGradient id="grad-NAR-001" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#FFEDD5"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="600" fill="#FFEDD5"/>
+  <circle cx="300" cy="270" r="190" fill="url(#grad-NAR-001)"/>
+  <text x="300" y="320" font-size="140" text-anchor="middle" dominant-baseline="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">🍊</text>
+  <rect x="50" y="490" width="500" height="60" rx="30" fill="#F97316" fill-opacity="0.15"/>
+  <text x="300" y="528" font-size="28" font-weight="700" fill="#F97316" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">Finike Portakal</text>
+  <text x="560" y="45" font-size="20" font-weight="600" fill="#9CA3AF" text-anchor="end" font-family="monospace">NAR-001</text>
+</svg>

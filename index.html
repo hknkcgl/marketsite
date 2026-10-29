@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yıldırımlar Manav - Tarladan Kapınıza Taze & Günlük</title>
+  <meta name="description" content="Yıldırımlar Manav: Taze sebze, meyve ve yeşillik siparişlerinizi hızlıca WhatsApp üzerinden verin. Kapıda ödeme, günlük taze hasat.">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              300: '#6ee7b7',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+            },
+            leaf: '#15803d',
+            sun: '#f59e0b',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- QRCode.js for Desktop WhatsApp Modal -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="bg-stone-50 text-stone-800 antialiased min-h-screen flex flex-col font-sans">
+
+  <!-- TOP BAR / ANNOUNCEMENT -->
+  <div class="bg-brand-900 text-brand-100 text-xs sm:text-sm py-2 px-4">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-1">
+      <div class="flex items-center gap-2 font-medium">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>🌿 Günlük hasat taze ürünler | 250 ₺ ve üzerine <strong>Ücretsiz Kapıya Teslimat</strong></span>
+      </div>
+      <div class="flex items-center gap-4 text-xs">
+        <a href="tel:05320000000" class="hover:text-white flex items-center gap-1 transition">
+          <i data-lucide="phone-call" class="w-3.5 h-3.5 text-brand-400"></i>
+          <span>Alo Manav: 0532 000 00 00</span>
+        </a>
+        <span class="text-brand-700">|</span>
+        <span>Hergün 08:00 - 21:00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN HEADER -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-200 shadow-sm transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+      
+      <!-- LOGO -->
+      <a href="#" class="flex items-center gap-3 group">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-700 to-brand-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
+          <i data-lucide="citrus" class="w-7 h-7"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-extrabold text-xl tracking-tight text-stone-900">Yıldırımlar</span>
+            <span class="font-black text-xl tracking-tight text-brand-600">Manav</span>
+          </div>
+          <p class="text-xs text-stone-500 font-medium">Tarladan Sofranıza Doğallık</p>
+        </div>
+      </a>
+
+      <!-- SEARCH BAR (DESKTOP) -->
+      <div class="hidden md:flex flex-1 max-w-md mx-6">
+        <div class="relative w-full">
+          <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="Taze domates, elma, nane ara..." 
+            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-300 bg-stone-50/70 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm transition"
+          >
+          <i data-lucide="search" class="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5"></i>
+          <button id="clearSearchBtn" class="hidden absolute right-3 top-3 text-stone-400 hover:text-stone-600">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- HEADER ACTIONS -->
+      <div class="flex items-center gap-3">
+        <!-- Direct Phone Call Button -->
+        <a href="tel:05320000000" class="hidden lg:flex items-center gap-2 text-stone-700 bg-stone-100 hover:bg-stone-200 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition">
+          <i data-lucide="phone" class="w-4 h-4 text-brand-600"></i>
+          <span>Ara & Sipariş Ver</span>
+        </a>
+
+        <!-- Cart Trigger Button -->
+        <button 
+          id="openCartBtn"
+          class="relative flex items-center gap-2.5 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm shadow-md shadow-brand-600/25 active:scale-95 transition-all"
+        >
+          <div class="relative">
+            <i data-lucide="shopping-basket" class="w-5 h-5"></i>
+            <span 
+              id="cartBadge" 
+              class="hidden absolute -top-2 -right-2.5 bg-sun text-stone-900 font-black text-[11px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+            >0</span>
+          </div>
+          <span class="hidden sm:inline">Sepetim</span>
+          <span id="cartHeaderTotal" class="hidden sm:inline font-bold border-l border-brand-500/60 pl-2">0,00 ₺</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- MOBILE SEARCH BAR (Visible only on mobile) -->
+    <div class="md:hidden px-4 pb-3">
+      <div class="relative w-full">
+        <input 
+          type="text" 
+          id="mobileSearchInput" 
+          placeholder="Sebze, meyve veya yeşillik ara..." 
+          class="w-full pl-9 pr-4 py-2 rounded-xl border border-stone-300 bg-stone-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+        >
+        <i data-lucide="search" class="w-4 h-4 text-stone-400 absolute left-3 top-2.5"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section class="bg-gradient-to-b from-brand-50/70 via-stone-50 to-stone-50 border-b border-stone-200/60 pt-6 pb-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="bg-gradient-to-r from-brand-900 via-brand-800 to-emerald-900 rounded-3xl p-6 sm:p-8 lg:p-10 text-white shadow-xl relative overflow-hidden">
+        
+        <!-- Decorative Background Glow -->
+        <div class="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none"></div>
+        <div class="absolute right-10 -bottom-20 w-60 h-60 rounded-full bg-sun/20 blur-2xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-2xl">
+          <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-brand-200 mb-4 border border-white/10">
+            <span>✨ Mahallenizin Güvenilir Manavı</span>
+          </div>
+          <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight leading-tight mb-3">
+            Taptaze Sebze & Meyveler <br class="hidden sm:inline"><span class="text-emerald-300">WhatsApp Kolaylığıyla</span> Kapınızda
+          </h1>
+          <p class="text-brand-100/90 text-sm sm:text-base leading-relaxed mb-6">
+            Özenle seçilmiş yerli hasat domatesler, çıtır salatalıklar, taze yeşillikler ve dalından meyveler. Sepetinizi hazırlayın, tek tıkla WhatsApp'tan kapınıza gelsin!
+          </p>
+
+          <!-- Badges -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs font-medium">
+            <div class="flex items-center gap-2 bg-black/20 backdrop-blur-sm px-3 py-2 rounded-xl">
+              <i data-lucide="leaf" class="w-4 h-4 text-emerald-400"></i>
+              <span>%100 Günlük Hasat</span>
+            </div>
+            <div class="flex items-center gap-2 bg-black/20 backdrop-blur-sm px-3 py-2 rounded-xl">
+              <i data-lucide="truck" class="w-4 h-4 text-sun"></i>
+              <span>Aynı Gün Hızlı Teslimat</span>
+            </div>
+            <div class="flex items-center gap-2 bg-black/20 backdrop-blur-sm px-3 py-2 rounded-xl col-span-2 sm:col-span-1">
+              <i data-lucide="wallet" class="w-4 h-4 text-emerald-300"></i>
+              <span>Kapıda Nakit / Kredi Kartı</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CATEGORY FILTER BAR (STICKY) -->
+  <section class="sticky top-20 z-20 bg-white/95 backdrop-blur-md border-b border-stone-200 py-3 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div id="categoryContainer" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 text-sm font-medium">
+        <!-- Rendered by JS: "Tümü", "Taze Sebzeler", "Mevsim Meyveleri" etc. -->
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN PRODUCT LISTING -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+    
+    <!-- Results Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h2 id="activeCategoryTitle" class="text-xl font-bold text-stone-900">Tüm Taze Ürünler</h2>
+        <p id="productCountInfo" class="text-xs text-stone-500 mt-0.5">Yükleniyor...</p>
+      </div>
+
+      <!-- Quick Sorting / Stock Note -->
+      <div class="text-xs text-stone-500 flex items-center gap-1.5 bg-stone-100 px-3 py-1.5 rounded-lg">
+        <i data-lucide="check-circle" class="w-3.5 h-3.5 text-brand-600"></i>
+        <span>Sadece stokta olan ürünler listelenir</span>
+      </div>
+    </div>
+
+    <!-- Product Grid -->
+    <div id="productGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+      <!-- Dynamically Rendered by JS -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden text-center py-16 px-4">
+      <div class="w-16 h-16 bg-stone-100 text-stone-400 rounded-full flex items-center justify-center mx-auto mb-3">
+        <i data-lucide="package-search" class="w-8 h-8"></i>
+      </div>
+      <h3 class="text-base font-bold text-stone-800">Aramanıza uygun ürün bulunamadı</h3>
+      <p class="text-xs text-stone-500 mt-1 max-w-sm mx-auto">Aradığınız kriterlere uygun taze ürün şu an mevcut değil veya stoğu tükenmiş olabilir.</p>
+      <button id="resetFilterBtn" class="mt-4 px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold hover:bg-brand-700 transition">
+        Filtreleri Temizle
+      </button>
+    </div>
+  </main>
+
+  <!-- CART SLIDE-OVER (DRAWER) -->
+  <div id="cartDrawerBackdrop" class="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+
+  <aside 
+    id="cartDrawer" 
+    class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-out flex flex-col"
+  >
+    <!-- Drawer Header -->
+    <div class="p-4 sm:p-5 border-b border-stone-200 flex items-center justify-between bg-stone-50/70">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center font-bold">
+          <i data-lucide="shopping-basket" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 class="font-extrabold text-base text-stone-900">Sipariş Sepetiniz</h3>
+          <p id="cartItemsCountText" class="text-xs text-stone-500">0 ürün seçildi</p>
+        </div>
+      </div>
+      <button id="closeCartBtn" class="w-8 h-8 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-200 flex items-center justify-center transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Free Delivery Meter -->
+    <div class="bg-brand-50 px-5 py-2.5 border-b border-brand-100 text-xs">
+      <div class="flex items-center justify-between text-brand-900 font-semibold mb-1">
+        <span id="deliveryMeterText">Ücretsiz teslimat için 250,00 ₺ üzeri</span>
+        <span id="deliveryRemainingText" class="text-brand-700"></span>
+      </div>
+      <div class="w-full bg-brand-200 rounded-full h-1.5 overflow-hidden">
+        <div id="deliveryProgressBar" class="bg-brand-600 h-full w-0 transition-all duration-300"></div>
+      </div>
+    </div>
+
+    <!-- Cart Items Scrollable List -->
+    <div id="cartItemsList" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 divide-y divide-stone-100">
+      <!-- Items dynamically populated -->
+    </div>
+
+    <!-- Empty Cart Notice -->
+    <div id="emptyCartView" class="hidden flex-1 flex flex-col items-center justify-center p-8 text-center">
+      <div class="w-16 h-16 bg-stone-100 text-stone-300 rounded-2xl flex items-center justify-center mb-3">
+        <i data-lucide="shopping-basket" class="w-8 h-8"></i>
+      </div>
+      <h4 class="font-bold text-stone-800 text-sm">Sepetiniz Boş</h4>
+      <p class="text-xs text-stone-500 mt-1 max-w-xs">Taze sebze ve meyvelerimizden sepetinize ekleyerek sipariş oluşturabilirsiniz.</p>
+    </div>
+
+    <!-- Cart Footer & Checkout Form -->
+    <div id="cartFooterSection" class="border-t border-stone-200 p-4 sm:p-5 bg-stone-50/80 space-y-4">
+      
+      <!-- Order Form Accordion / Inputs -->
+      <div class="space-y-2.5 bg-white p-3.5 rounded-2xl border border-stone-200/80 shadow-sm">
+        <div class="flex items-center justify-between text-xs font-bold text-stone-700 mb-1">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-brand-600"></i>
+            Teslimat Bilgileri
+          </span>
+          <span class="text-[11px] text-stone-400 font-normal">Kapıda Ödeme</span>
+        </div>
+
+        <input 
+          type="text" 
+          id="customerName" 
+          placeholder="Adınız Soyadınız *" 
+          class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
+          required
+        >
+
+        <input 
+          type="tel" 
+          id="customerPhone" 
+          placeholder="Telefon Numaranız (05XX...) *" 
+          class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
+          required
+        >
+
+        <textarea 
+          id="customerAddress" 
+          rows="2" 
+          placeholder="Mahalle, Sokak, No, Daire, İlçe *" 
+          class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 resize-none"
+          required
+        ></textarea>
+
+        <input 
+          type="text" 
+          id="orderNote" 
+          placeholder="Sipariş Notu (Örn: Domatesler sert olsun)" 
+          class="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+        >
+
+        <!-- KVKK Aydınlatma Bağlantısı -->
+        <div class="text-[11px] text-stone-500 leading-tight pt-1 flex items-start gap-1">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-brand-600 flex-shrink-0 mt-0.5"></i>
+          <span>
+            Siparişi göndererek kişisel verilerinizin teslimat amacıyla işlenmesine dair 
+            <button type="button" id="openKvkkModalBtn" class="text-brand-600 font-semibold underline hover:text-brand-800">
+              Aydınlatma Metni
+            </button>'ni incelediğinizi beyan edersiniz.
+          </span>
+        </div>
+      </div>
+
+      <!-- Totals Summary -->
+      <div class="space-y-1.5 text-xs text-stone-600">
+        <div class="flex justify-between">
+          <span>Ara Toplam:</span>
+          <span id="cartSubtotal" class="font-semibold text-stone-800">0,00 ₺</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Teslimat Ücreti:</span>
+          <span id="cartDeliveryFee" class="font-semibold text-emerald-600">Ücretsiz</span>
+        </div>
+        <div class="flex justify-between text-sm sm:text-base font-extrabold text-stone-900 border-t border-stone-200 pt-2">
+          <span>Genel Toplam:</span>
+          <span id="cartGrandTotal" class="text-brand-700">0,00 ₺</span>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <button 
+        id="submitOrderBtn" 
+        class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-[0.98] transition-all"
+      >
+        <i data-lucide="message-circle" class="w-5 h-5"></i>
+        <span>WhatsApp ile Sipariş Ver</span>
+      </button>
+
+      <!-- Alternative Call Option -->
+      <div class="text-center pt-0.5">
+        <a href="tel:05320000000" class="text-xs text-stone-500 hover:text-brand-700 inline-flex items-center gap-1 font-medium">
+          <i data-lucide="phone" class="w-3 h-3 text-stone-400"></i>
+          <span>Veya telefonla arayarak sipariş ver: <strong>0532 000 00 00</strong></span>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- DESKTOP WHATSAPP QR MODAL -->
+  <div id="qrModalBackdrop" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div id="qrModalBox" class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl transform scale-95 transition-transform duration-300">
+      
+      <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+        <i data-lucide="qr-code" class="w-6 h-6"></i>
+      </div>
+
+      <h3 class="text-lg font-extrabold text-stone-900">Siparişi Telefonunuzdan Gönderin</h3>
+      <p class="text-xs text-stone-500 mt-1 mb-4 leading-relaxed">
+        Telefonunuzun kamerasını aşağıdaki QR koda tutun. Siparişiniz otomatik olarak telefonunuzdaki WhatsApp'ta açılacaktır.
+      </p>
+
+      <!-- Dynamic QR Code Container -->
+      <div class="bg-stone-50 p-4 rounded-2xl border border-stone-200 inline-block mb-4 shadow-inner">
+        <div id="qrCodeTarget" class="flex items-center justify-center w-48 h-48 mx-auto"></div>
+      </div>
+
+      <!-- Action Buttons in Modal -->
+      <div class="space-y-2">
+        <a 
+          id="openWhatsAppWebBtn" 
+          href="#" 
+          target="_blank" 
+          class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition"
+        >
+          <i data-lucide="external-link" class="w-4 h-4"></i>
+          <span>Bilgisayarda WhatsApp Web ile Aç</span>
+        </a>
+
+        <button 
+          id="copyOrderTextBtn" 
+          class="w-full py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+        >
+          <i data-lucide="copy" class="w-4 h-4"></i>
+          <span>Sipariş Metnini Kopyala</span>
+        </button>
+
+        <button 
+          id="closeQrModalBtn" 
+          class="w-full py-2 text-stone-400 hover:text-stone-600 text-xs font-medium"
+        >
+          Kapat
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KVKK AYDINLATMA METNİ MODAL -->
+  <div id="kvkkModalBackdrop" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl">
+      
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-stone-200 flex items-center justify-between bg-stone-50 rounded-t-3xl">
+        <div class="flex items-center gap-2">
+          <i data-lucide="shield-check" class="w-5 h-5 text-brand-600"></i>
+          <h3 class="font-bold text-stone-900 text-sm sm:text-base">Kişisel Verilerin Korunması Aydınlatma Metni</h3>
+        </div>
+        <button id="closeKvkkModalBtn" class="text-stone-400 hover:text-stone-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-5 overflow-y-auto text-xs text-stone-600 space-y-3 leading-relaxed">
+        <p><strong>Veri Sorumlusu:</strong> Yıldırımlar Manav ("İşletme")</p>
+        
+        <p>
+          6698 sayılı Kişisel Verilerin Korunması Kanunu (“KVKK”) uyarınca, sipariş formunda tarafınızca iletilen 
+          <strong>Ad-Soyad, Telefon Numarası ve Teslimat Adresi</strong> verileriniz;
+        </p>
+
+        <ul class="list-disc pl-5 space-y-1">
+          <li>Siparişinizin hazırlanması, teyit edilmesi ve adresinize teslim edilmesi,</li>
+          <li>Sipariş sürecine ilişkin sizinle iletişim kurulabilmesi,</li>
+          <li>KVKK Madde 5/2-c bendi uyarınca <em>"Bir sözleşmenin kurulması veya ifasıyla doğrudan doğruya ilgili olması"</em> hukuki sebebiyle işlenmektedir.</li>
+        </ul>
+
+        <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl text-amber-900">
+          <strong>Önemli Bilgilendirme:</strong> Sitemizde merkezi bir veritabanı veya sunucu üzerinde kişisel veri kaydı tutulmamaktadır. Sipariş bilgileriniz, sizin tarafınızdan doğrudan işletmemizin WhatsApp hattına gönderilmektedir.
+        </div>
+
+        <p>
+          Kişisel verileriniz kurye/teslimat personeli haricinde hiçbir üçüncü taraf veya reklam şirketiyle paylaşılmaz, reklam havuzlarına aktarılmaz. 
+          KVKK’nın 11. maddesi kapsamındaki haklarınızı işletmemiz ile iletişime geçerek her zaman kullanabilirsiniz.
+        </p>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-stone-200 bg-stone-50 rounded-b-3xl text-right">
+        <button id="confirmKvkkModalBtn" class="px-5 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold hover:bg-brand-700 transition">
+          Okudum, Anladım
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- FOOTER -->
+  <footer class="bg-stone-900 text-stone-400 text-xs py-10 mt-auto border-t border-stone-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        
+        <div class="space-y-3 md:col-span-2">
+          <div class="flex items-center gap-2 text-white font-extrabold text-lg">
+            <i data-lucide="citrus" class="w-6 h-6 text-brand-500"></i>
+            <span>Yıldırımlar Manav</span>
+          </div>
+          <p class="text-stone-400 max-w-sm leading-relaxed">
+            Mahallenizin günlük ve taze manavı. Tarladan sofranıza doğal lezzetleri güvenle ve hızlıca ulaştırıyoruz.
+          </p>
+          <div class="flex items-center gap-2 text-emerald-400 font-semibold">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+            <span>Haftanın her günü 08:00 - 21:00 arası sipariş</span>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <h4 class="text-white font-bold text-sm">Hızlı İletişim</h4>
+          <p>📞 <strong>Sipariş Hattı:</strong> 0532 000 00 00</p>
+          <p>📍 <strong>Adres:</strong> Çarşı Cad. No:14/A Kadıköy / İstanbul</p>
+          <p>💬 <strong>WhatsApp:</strong> 0532 000 00 00</p>
+        </div>
+
+        <div class="space-y-2">
+          <h4 class="text-white font-bold text-sm">Güvenli Alışveriş</h4>
+          <ul class="space-y-1">
+            <li><button id="footerKvkkBtn" class="hover:text-white transition">KVKK Aydınlatma Metni</button></li>
+            <li><span>Kapıda Nakit / Kredi Kartı</span></li>
+            <li><span>Tazelik Garantisi</span></li>
+            <li><span>%100 Müşteri Memnuniyeti</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="border-t border-stone-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-stone-500">
+        <p>© 2026 Yıldırımlar Manav. Tüm hakları saklıdır. GitHub tabanlı statik sipariş vitrini.</p>
+        <p class="flex items-center gap-1">
+          <span>Tasarım ve Altyapı: Marketsite Jamstack Engine</span>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="assets/js/cart.js"></script>
+  <script src="assets/js/whatsapp.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
