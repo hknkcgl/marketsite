@@ -5,7 +5,7 @@
     "category": "Taze Sebzeler",
     "price": 48.0,
     "unit": "kg",
-    "stock": 0,
+    "stock": 5,
     "image": "assets/images/products/SEB-001.jpg",
     "description": "Doğal tarla hasadı, mis kokulu ve etli yerli domates."
   },
@@ -15,7 +15,7 @@
     "category": "Taze Sebzeler",
     "price": 35.0,
     "unit": "kg",
-    "stock": 30,
+    "stock": 0,
     "image": "assets/images/products/SEB-002.jpg",
     "description": "İnce kabuklu, taze ve sulu Çengelköy tipi salatalık."
   },
