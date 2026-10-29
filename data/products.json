@@ -5,7 +5,7 @@
     "category": "Taze Sebzeler",
     "price": 48.0,
     "unit": "kg",
-    "stock": 5,
+    "stock": 0,
     "image": "assets/images/products/SEB-001.jpg",
     "description": "Doğal tarla hasadı, mis kokulu ve etli yerli domates."
   },
@@ -35,7 +35,7 @@
     "category": "Taze Sebzeler",
     "price": 22.0,
     "unit": "kg",
-    "stock": 80,
+    "stock": 0,
     "image": "assets/images/products/SEB-004.jpg",
     "description": "Yemeklik ve kızartmalık lezzetli taze sarı patates."
   },
