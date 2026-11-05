@@ -158,5 +158,15 @@
     "stock": 18,
     "image": "assets/images/products/NAR-003.jpg",
     "description": "Yemeye hazır, krema kıvamında yumuşak taze avokado."
+  },
+  {
+    "sku": "TEST-PORTAKAL-01",
+    "name": "Finike Sıkmalık Portakal",
+    "category": "Mevsim Meyveleri",
+    "price": 42.5,
+    "unit": "kg",
+    "stock": 50,
+    "image": "assets/images/products/TEST-PORTAKAL-01.png",
+    "description": "Taptaze sulu Finike portakalı - Canlı test ürünü"
   }
 ]
