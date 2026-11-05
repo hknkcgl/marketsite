@@ -163,9 +163,9 @@
     "sku": "TEST-PORTAKAL-01",
     "name": "Finike Sıkmalık Portakal",
     "category": "Mevsim Meyveleri",
-    "price": 42.5,
+    "price": 52.0,
     "unit": "kg",
-    "stock": 50,
+    "stock": 35,
     "image": "assets/images/products/TEST-PORTAKAL-01.png",
     "description": "Taptaze sulu Finike portakalı - Canlı test ürünü"
   }
