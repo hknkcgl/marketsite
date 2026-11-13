@@ -53,6 +53,40 @@ document.addEventListener('DOMContentLoaded', () => {
   // ----------------------------------------------------
   // 1. ÜRÜN VERİLERİNİ ÇEKME VE BAŞLATMA
   // ----------------------------------------------------
+  // SEO: Ürün listesini arama motorları için JSON-LD olarak ekler
+  function injectProductSchema(products) {
+    const old = document.getElementById('productSchema');
+    if (old) old.remove();
+    const schema = {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      itemListElement: products.map((p, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        item: {
+          '@type': 'Product',
+          name: p.name,
+          description: p.description || p.name,
+          category: p.category,
+          sku: p.sku,
+          image: new URL(p.image, location.href).href,
+          offers: {
+            '@type': 'Offer',
+            price: Number(p.price).toFixed(2),
+            priceCurrency: 'TRY',
+            availability: 'https://schema.org/InStock',
+            url: location.origin + '/'
+          }
+        }
+      }))
+    };
+    const el = document.createElement('script');
+    el.type = 'application/ld+json';
+    el.id = 'productSchema';
+    el.textContent = JSON.stringify(schema);
+    document.head.appendChild(el);
+  }
+
   async function loadProducts() {
     try {
       // Önbellek engellemek için anlık zaman damgası eklenir
@@ -64,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // PRD KURALI: Stok adedi 0 veya daha az olan ürünler vitrinde GÖSTERİLMEZ
       allProducts = rawProducts.filter(p => Number(p.stock) > 0);
 
+      injectProductSchema(allProducts);
       renderCategories();
       renderProducts();
       updateCartUI(window.cart.getSummary());
