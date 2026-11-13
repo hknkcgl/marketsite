@@ -84,17 +84,15 @@ class GitHubService {
   /// Aktif olarak kullanılan .env dosyasını döndürür
   File get currentEnvFile => EnvConfig.resolveEnvFile();
 
-  /// Ayarları önce .env dosyasından, yoksa SharedPreferences ve varsayılanlardan yükler
+  /// Ayarları önce .env dosyasından, yoksa SharedPreferences ve varsayılanlardan yükler.
+  /// Yayın adresi (owner/repo/branch/filePath) sabittir; kullanıcı tarafından
+  /// değiştirilemez. Yalnızca token ve yerel repo yolu dışarıdan okunur.
   Future<void> loadSettings() async {
     final envFile = currentEnvFile;
 
     if (envFile.existsSync()) {
       final env = EnvConfig.readEnv(envFile);
       if (env.isNotEmpty) {
-        owner = env[EnvConfig.keyOwner] ?? owner;
-        repo = env[EnvConfig.keyRepo] ?? repo;
-        branch = env[EnvConfig.keyBranch] ?? branch;
-        filePath = env[EnvConfig.keyFilePath] ?? filePath;
         token = env[EnvConfig.keyToken] ?? token;
         localRepoPath = env[EnvConfig.keyLocalRepoPath] ?? localRepoPath;
         return;
@@ -104,10 +102,6 @@ class GitHubService {
     // .env dosyası bulunamadıysa SharedPreferences'tan çek ve .env oluştur
     try {
       final prefs = await SharedPreferences.getInstance();
-      owner = prefs.getString(keyOwner) ?? owner;
-      repo = prefs.getString(keyRepo) ?? repo;
-      branch = prefs.getString(keyBranch) ?? branch;
-      filePath = prefs.getString(keyFilePath) ?? filePath;
       token = prefs.getString(keyToken) ?? token;
       localRepoPath = prefs.getString(keyLocalRepoPath) ?? localRepoPath;
 
@@ -125,17 +119,9 @@ class GitHubService {
 
   /// Ayarları hem .env dosyasına hem de SharedPreferences'a kaydeder
   Future<void> saveSettings({
-    required String owner,
-    required String repo,
-    required String branch,
-    required String filePath,
     required String token,
     String? localRepoPath,
   }) async {
-    this.owner = owner.trim();
-    this.repo = repo.trim();
-    this.branch = branch.trim();
-    this.filePath = filePath.trim();
     this.token = token.trim();
     if (localRepoPath != null) {
       this.localRepoPath = localRepoPath.trim();
@@ -143,10 +129,10 @@ class GitHubService {
 
     // 1. .env dosyasına yaz (Windows ve diğer sistemlerde kurulum dizininde tutulur)
     await EnvConfig.writeEnv(currentEnvFile, {
-      EnvConfig.keyOwner: this.owner,
-      EnvConfig.keyRepo: this.repo,
-      EnvConfig.keyBranch: this.branch,
-      EnvConfig.keyFilePath: this.filePath,
+      EnvConfig.keyOwner: owner,
+      EnvConfig.keyRepo: repo,
+      EnvConfig.keyBranch: branch,
+      EnvConfig.keyFilePath: filePath,
       EnvConfig.keyToken: this.token,
       EnvConfig.keyLocalRepoPath: this.localRepoPath,
     });
@@ -154,10 +140,6 @@ class GitHubService {
     // 2. Geriye dönük uyumluluk için SharedPreferences'a da yaz
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(keyOwner, this.owner);
-      await prefs.setString(keyRepo, this.repo);
-      await prefs.setString(keyBranch, this.branch);
-      await prefs.setString(keyFilePath, this.filePath);
       await prefs.setString(keyToken, this.token);
       await prefs.setString(keyLocalRepoPath, this.localRepoPath);
     } catch (_) {}

@@ -186,7 +186,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ],
         ),
         content: Text(
-          '${product.name} (${product.sku}) ürününü silmek istediğinize emin misiniz?\n\nDeğişiklikleri GitHub\'a yayınladığınızda ürün siteden ve repodan kaldırılacaktır.',
+          '${product.name} (${product.sku}) ürününü silmek istediğinize emin misiniz?\n\nDeğişiklikleri kaydedip yayınladığınızda ürün siteden kaldırılacaktır.',
           style: const TextStyle(fontSize: 13),
         ),
         actions: [
@@ -256,10 +256,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  Future<void> _publishToGitHub() async {
+  Future<void> _saveAndPublish() async {
     final modified = _modifiedProducts;
     final deleted = List<Product>.from(_deletedProducts);
-    final totalChanges = _totalChangesCount;
 
     if (!_hasChanges) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -271,121 +270,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }
 
     if (!_githubService.hasToken) {
-      _openSettings();
+      if (kDebugMode) _openSettings();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'GitHub token girilmemiş. Lütfen ayarlar ekranından token tanımlayın.',
+            'Yayınlama yapılandırması eksik. Lütfen yöneticinize başvurun.',
           ),
         ),
       );
       return;
     }
 
-    final commitController = TextEditingController(
-      text:
-          'envanter güncellemesi: ${modified.length} ürün güncellendi, ${deleted.length} ürün silindi',
-    );
-
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.cloud_upload, color: AppColors.emerald700),
-            SizedBox(width: 10),
-            Text('Değişiklikleri GitHub\'a Yayınla'),
-          ],
-        ),
-        content: SizedBox(
-          width: 480,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Toplam $totalChanges adet değişiklik (${modified.length} güncellenen, ${deleted.length} silinen) GitHub reposuna push edilecek ve sitede hemen güncellenecektir.',
-                style: const TextStyle(fontSize: 13),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                constraints: const BoxConstraints(maxHeight: 140),
-                width: double.infinity,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.stone100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ...modified.map(
-                        (p) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Text(
-                            p.isNew
-                                ? '• [YENİ] ${p.sku} - ${p.name}: Fiyat ₺${p.price} | Stok ${p.stock}'
-                                : '• [GÜNCEL] ${p.sku} - ${p.name}: Fiyat ₺${p.initialPrice} ➔ ₺${p.price} | Stok ${p.initialStock} ➔ ${p.stock}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontFamily: 'monospace',
-                            ),
-                          ),
-                        ),
-                      ),
-                      ...deleted.map(
-                        (p) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Text(
-                            '• [SİLİNDİ] ${p.sku} - ${p.name}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontFamily: 'monospace',
-                              color: Colors.red,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: commitController,
-                decoration: const InputDecoration(
-                  labelText: 'Commit Mesajı',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.emerald700,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Yayınla & Push Et'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    // MouseTracker ve route transition çakışmalarını önlemek için güvenli mikrosaniye bekle
-    await Future.delayed(const Duration(milliseconds: 80));
-    if (!mounted) return;
+    final commitMessage =
+        'envanter güncellemesi: ${modified.length} ürün güncellendi, ${deleted.length} ürün silindi';
 
     setState(() => _isPublishing = true);
 
@@ -403,9 +300,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
       }
 
       // 2. Güncellenmiş ürün listesini GitHub'a push et
-      final commitHash = await _githubService.pushProducts(
+      await _githubService.pushProducts(
         _allProducts,
-        customMessage: commitController.text,
+        customMessage: commitMessage,
       );
 
       // 3. Silinen ürünlerin varsa özel görsellerini GitHub'dan ve yerel diskten temizle
@@ -463,7 +360,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Başarıyla GitHub\'a yayınlandı! ($commitHash)${uploadedImagesCount > 0 ? " • $uploadedImagesCount görsel yüklendi" : ""} - Siteniz 1-2 dk içinde güncellenecektir.',
+                    'Değişiklikler kaydedildi!${uploadedImagesCount > 0 ? " • $uploadedImagesCount görsel yüklendi" : ""} - Siteniz 1-2 dk içinde güncellenecektir.',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
@@ -577,15 +474,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  Text(
-                    'Repo: ${_githubService.owner}/${_githubService.repo} (${_githubService.branch})',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Colors.black45,
-                      fontFamily: 'monospace',
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
                 ],
               ),
             ),
@@ -609,14 +497,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ? null
                   : () => _syncLocalGitPull(isAuto: false),
             ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.black54),
-            tooltip: 'GitHub Bağlantı Ayarları',
-            onPressed: _openSettings,
-          ),
+          if (kDebugMode)
+            IconButton(
+              icon: const Icon(Icons.settings_outlined, color: Colors.black54),
+              tooltip: 'Bağlantı Ayarları',
+              onPressed: _openSettings,
+            ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.black54),
-            tooltip: 'GitHub\'dan Yeniden Yükle',
+            tooltip: 'Yeniden Yükle',
             onPressed: _isLoading ? null : _loadProducts,
           ),
           const SizedBox(width: 8),
@@ -634,7 +523,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
           FilledButton.icon(
             onPressed: totalChanges > 0 && !_isPublishing
-                ? _publishToGitHub
+                ? _saveAndPublish
                 : null,
             icon: _isPublishing
                 ? const SizedBox(
@@ -671,7 +560,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           children: [
             CircularProgressIndicator(color: AppColors.emerald600),
             SizedBox(height: 16),
-            Text('GitHub\'dan ürünler çekiliyor...'),
+            Text('Ürünler yükleniyor...'),
           ],
         ),
       );
@@ -693,7 +582,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               const Icon(Icons.error_outline, color: Colors.red, size: 48),
               const SizedBox(height: 14),
               const Text(
-                'GitHub Bağlantı Hatası',
+                'Bağlantı Hatası',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
@@ -706,11 +595,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  OutlinedButton(
-                    onPressed: _openSettings,
-                    child: const Text('Ayarları Kontrol Et'),
-                  ),
-                  const SizedBox(width: 12),
+                  if (kDebugMode) ...[
+                    OutlinedButton(
+                      onPressed: _openSettings,
+                      child: const Text('Ayarları Kontrol Et'),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
                   ElevatedButton(
                     onPressed: _loadProducts,
                     style: ElevatedButton.styleFrom(
@@ -855,8 +746,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           )
                           .toList(),
                       onChanged: (val) {
-                        if (val != null)
+                        if (val != null) {
                           setState(() => _selectedCategory = val);
+                        }
                       },
                     ),
                   );
@@ -1311,7 +1203,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           );
 
           final publishButton = ElevatedButton.icon(
-            onPressed: _isPublishing ? null : _publishToGitHub,
+            onPressed: _isPublishing ? null : _saveAndPublish,
             icon: _isPublishing
                 ? const SizedBox(
                     width: 14,
@@ -1325,7 +1217,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             label: Text(
               constraints.maxWidth < 750
                   ? 'Yayınla'
-                  : 'GitHub\'a Kaydet ve Sitede Yayınla',
+                  : 'Kaydet ve Yayınla',
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.emerald600,

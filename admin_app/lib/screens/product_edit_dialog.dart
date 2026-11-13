@@ -338,7 +338,7 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                               const SizedBox(height: 4),
                               Text(
                                 _newImageBytes != null
-                                    ? '✓ Yeni görsel hazır (Yayınla dediğinizde GitHub\'a push edilecek)'
+                                    ? '✓ Yeni görsel hazır (Kaydet ve Yayınla dediğinizde yüklenecek)'
                                     : 'JPG, PNG veya WEBP formatında ürün fotoğrafı seçebilirsiniz.',
                                 style: TextStyle(
                                   fontSize: 11,
@@ -490,10 +490,12 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                             isDense: true,
                           ),
                           validator: (val) {
-                            if (val == null || val.trim().isEmpty)
+                            if (val == null || val.trim().isEmpty) {
                               return 'Gerekli';
-                            if (Product.parseNumber(val) == null)
+                            }
+                            if (Product.parseNumber(val) == null) {
                               return 'Geçersiz sayı (örn: 12,50 — binlik ayracı kullanmayın)';
+                            }
                             return null;
                           },
                         ),
@@ -510,10 +512,12 @@ class _ProductEditDialogState extends State<ProductEditDialog> {
                             isDense: true,
                           ),
                           validator: (val) {
-                            if (val == null || val.trim().isEmpty)
+                            if (val == null || val.trim().isEmpty) {
                               return 'Gerekli';
-                            if (int.tryParse(val) == null)
+                            }
+                            if (int.tryParse(val) == null) {
                               return 'Geçersiz tam sayı';
+                            }
                             return null;
                           },
                         ),

@@ -17,10 +17,6 @@ class SettingsDialog extends StatefulWidget {
 }
 
 class _SettingsDialogState extends State<SettingsDialog> {
-  late final TextEditingController _ownerController;
-  late final TextEditingController _repoController;
-  late final TextEditingController _branchController;
-  late final TextEditingController _filePathController;
   late final TextEditingController _tokenController;
 
   bool _isTesting = false;
@@ -30,23 +26,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
   @override
   void initState() {
     super.initState();
-    _ownerController = TextEditingController(text: widget.githubService.owner);
-    _repoController = TextEditingController(text: widget.githubService.repo);
-    _branchController = TextEditingController(
-      text: widget.githubService.branch,
-    );
-    _filePathController = TextEditingController(
-      text: widget.githubService.filePath,
-    );
     _tokenController = TextEditingController(text: widget.githubService.token);
   }
 
   @override
   void dispose() {
-    _ownerController.dispose();
-    _repoController.dispose();
-    _branchController.dispose();
-    _filePathController.dispose();
     _tokenController.dispose();
     super.dispose();
   }
@@ -58,10 +42,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
     });
 
     try {
-      widget.githubService.owner = _ownerController.text.trim();
-      widget.githubService.repo = _repoController.text.trim();
-      widget.githubService.branch = _branchController.text.trim();
-      widget.githubService.filePath = _filePathController.text.trim();
       widget.githubService.token = _tokenController.text.trim();
 
       final products = await widget.githubService.fetchProducts();
@@ -87,10 +67,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   Future<void> _save() async {
     await widget.githubService.saveSettings(
-      owner: _ownerController.text,
-      repo: _repoController.text,
-      branch: _branchController.text,
-      filePath: _filePathController.text,
       token: _tokenController.text,
     );
     widget.onSaved();
@@ -205,67 +181,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // Repo Bilgileri
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _ownerController,
-                        decoration: const InputDecoration(
-                          labelText: 'GitHub Kullanıcı Adı / Org',
-                          hintText: 'hknkcgl',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _repoController,
-                        decoration: const InputDecoration(
-                          labelText: 'Repo Adı',
-                          hintText: 'marketsite',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: TextField(
-                        controller: _branchController,
-                        decoration: const InputDecoration(
-                          labelText: 'Branch (Dal)',
-                          hintText: 'main',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: TextField(
-                        controller: _filePathController,
-                        decoration: const InputDecoration(
-                          labelText: 'Veri Dosya Yolu',
-                          hintText: 'data/products.json',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
 
                 // Personal Access Token
                 TextField(
