@@ -1,21 +1,29 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../services/github_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/product_thumbnail.dart';
 import 'settings_dialog.dart';
 import 'product_edit_dialog.dart';
 
 class InventoryScreen extends StatefulWidget {
-  const InventoryScreen({super.key});
+  final GitHubService? githubService;
+  final List<Product>? initialProducts;
+
+  const InventoryScreen({super.key, this.githubService, this.initialProducts});
 
   @override
   State<InventoryScreen> createState() => _InventoryScreenState();
 }
 
 class _InventoryScreenState extends State<InventoryScreen> {
-  final GitHubService _githubService = GitHubService();
+  late final GitHubService _githubService;
 
   List<Product> _allProducts = [];
+  final List<Product> _deletedProducts = [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -24,17 +32,71 @@ class _InventoryScreenState extends State<InventoryScreen> {
   String _stockFilter = 'all'; // all, in_stock, out_of_stock, modified
 
   bool _isPublishing = false;
+  bool _isSyncingGit = false;
+
+  Future<void> _syncLocalGitPull({bool isAuto = false}) async {
+    setState(() => _isSyncingGit = true);
+    try {
+      final output = await _githubService.gitPullLocalRepo();
+      _githubService.clearImageCache();
+      if (mounted) {
+        setState(() => _isSyncingGit = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.deepPurple.shade700,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            content: Row(
+              children: [
+                const Icon(Icons.terminal, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isAuto
+                        ? 'Otomatik Yerel Senkronizasyon: $output'
+                        : 'Yerel Git Pull Başarılı: $output',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSyncingGit = false);
+        if (!isAuto) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.red.shade700,
+              content: Text(
+                'Yerel Git Pull Hatası: ${e.toString().replaceAll('Exception: ', '')}',
+              ),
+            ),
+          );
+        }
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadProducts();
+    _githubService = widget.githubService ?? GitHubService();
+    if (widget.initialProducts != null) {
+      _allProducts = List.from(widget.initialProducts!);
+      _isLoading = false;
+    } else {
+      _loadProducts();
+    }
   }
 
   Future<void> _loadProducts() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _deletedProducts.clear();
     });
 
     try {
@@ -56,14 +118,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }
   }
 
-  List<Product> get _modifiedProducts => _allProducts.where((p) => p.isModified).toList();
+  List<Product> get _modifiedProducts =>
+      _allProducts.where((p) => p.isModified).toList();
+  int get _totalChangesCount =>
+      _modifiedProducts.length + _deletedProducts.length;
+  bool get _hasChanges => _totalChangesCount > 0;
 
   List<Product> get _filteredProducts {
     return _allProducts.where((p) {
-      final matchesCategory = _selectedCategory == 'Tümü' || p.category == _selectedCategory;
+      final matchesCategory =
+          _selectedCategory == 'Tümü' || p.category == _selectedCategory;
 
       final query = _searchQuery.toLowerCase().trim();
-      final matchesSearch = query.isEmpty ||
+      final matchesSearch =
+          query.isEmpty ||
           p.sku.toLowerCase().contains(query) ||
           p.name.toLowerCase().contains(query) ||
           p.category.toLowerCase().contains(query);
@@ -105,18 +173,82 @@ class _InventoryScreenState extends State<InventoryScreen> {
     });
   }
 
+  Future<void> _deleteProduct(Product product) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Ürünü Sil'),
+          ],
+        ),
+        content: Text(
+          '${product.name} (${product.sku}) ürününü silmek istediğinize emin misiniz?\n\nDeğişiklikleri GitHub\'a yayınladığınızda ürün siteden ve repodan kaldırılacaktır.',
+          style: const TextStyle(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Evet, Sil'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() {
+        _allProducts.removeWhere((p) => p.sku == product.sku);
+        if (!product.isNew) {
+          _deletedProducts.add(product);
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${product.name} silinmek üzere işaretlendi.'),
+          action: SnackBarAction(
+            label: 'Geri Al',
+            onPressed: () {
+              setState(() {
+                _deletedProducts.removeWhere((p) => p.sku == product.sku);
+                _allProducts.add(product);
+              });
+            },
+          ),
+        ),
+      );
+    }
+  }
+
   void _revertProduct(Product product) {
     setState(() {
-      product.price = product.initialPrice;
-      product.stock = product.initialStock;
+      if (product.isNew) {
+        _allProducts.removeWhere((p) => p.sku == product.sku);
+      } else {
+        product.revertChanges();
+      }
     });
   }
 
   void _revertAllChanges() {
     setState(() {
+      for (final p in _deletedProducts) {
+        _allProducts.add(p);
+      }
+      _deletedProducts.clear();
+      _allProducts.removeWhere((p) => p.isNew);
       for (final p in _allProducts) {
-        p.price = p.initialPrice;
-        p.stock = p.initialStock;
+        p.revertChanges();
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -126,9 +258,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Future<void> _publishToGitHub() async {
     final modified = _modifiedProducts;
-    if (modified.isEmpty) {
+    final deleted = List<Product>.from(_deletedProducts);
+    final totalChanges = _totalChangesCount;
+
+    if (!_hasChanges) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kaydedilecek bir değişiklik bulunmuyor.')),
+        const SnackBar(
+          content: Text('Kaydedilecek bir değişiklik bulunmuyor.'),
+        ),
       );
       return;
     }
@@ -136,13 +273,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
     if (!_githubService.hasToken) {
       _openSettings();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('GitHub token girilmemiş. Lütfen ayarlar ekranından token tanımlayın.')),
+        const SnackBar(
+          content: Text(
+            'GitHub token girilmemiş. Lütfen ayarlar ekranından token tanımlayın.',
+          ),
+        ),
       );
       return;
     }
 
     final commitController = TextEditingController(
-      text: 'stok ve fiyat güncellemesi: ${modified.length} ürün güncellendi',
+      text:
+          'envanter güncellemesi: ${modified.length} ürün güncellendi, ${deleted.length} ürün silindi',
     );
 
     final bool? confirmed = await showDialog<bool>(
@@ -156,40 +298,71 @@ class _InventoryScreenState extends State<InventoryScreen> {
             Text('Değişiklikleri GitHub\'a Yayınla'),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${modified.length} adet ürünün stok veya fiyat bilgisi GitHub reposuna push edilecek ve sitede hemen güncellenecek.',
-              style: const TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              constraints: const BoxConstraints(maxHeight: 140),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.stone100,
-                borderRadius: BorderRadius.circular(8),
+        content: SizedBox(
+          width: 480,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Toplam $totalChanges adet değişiklik (${modified.length} güncellenen, ${deleted.length} silinen) GitHub reposuna push edilecek ve sitede hemen güncellenecektir.',
+                style: const TextStyle(fontSize: 13),
               ),
-              child: ListView(
-                shrinkWrap: true,
-                children: modified.map((p) => Text(
-                  '• ${p.sku} - ${p.name}: Fiyat ₺${p.initialPrice} ➔ ₺${p.price} | Stok ${p.initialStock} ➔ ${p.stock}',
-                  style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
-                )).toList(),
+              const SizedBox(height: 12),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 140),
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.stone100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ...modified.map(
+                        (p) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(
+                            p.isNew
+                                ? '• [YENİ] ${p.sku} - ${p.name}: Fiyat ₺${p.price} | Stok ${p.stock}'
+                                : '• [GÜNCEL] ${p.sku} - ${p.name}: Fiyat ₺${p.initialPrice} ➔ ₺${p.price} | Stok ${p.initialStock} ➔ ${p.stock}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ),
+                      ),
+                      ...deleted.map(
+                        (p) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(
+                            '• [SİLİNDİ] ${p.sku} - ${p.name}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontFamily: 'monospace',
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: commitController,
-              decoration: const InputDecoration(
-                labelText: 'Commit Mesajı',
-                border: OutlineInputBorder(),
-                isDense: true,
+              const SizedBox(height: 16),
+              TextField(
+                controller: commitController,
+                decoration: const InputDecoration(
+                  labelText: 'Commit Mesajı',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -210,42 +383,101 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     if (confirmed != true) return;
 
+    // MouseTracker ve route transition çakışmalarını önlemek için güvenli mikrosaniye bekle
+    await Future.delayed(const Duration(milliseconds: 80));
+    if (!mounted) return;
+
     setState(() => _isPublishing = true);
 
     try {
+      // 1. Bekleyen yeni ürün görsellerini GitHub'a push et
+      int uploadedImagesCount = 0;
+      for (final p in _allProducts) {
+        if (p.hasPendingImage) {
+          await _githubService.pushImageFile(
+            repoFilePath: p.image,
+            bytes: p.pendingImageBytes!,
+          );
+          uploadedImagesCount++;
+        }
+      }
+
+      // 2. Güncellenmiş ürün listesini GitHub'a push et
       final commitHash = await _githubService.pushProducts(
         _allProducts,
         customMessage: commitController.text,
       );
 
-      if (mounted) {
-        setState(() => _isPublishing = false);
-        await _loadProducts();
+      // 3. Silinen ürünlerin varsa özel görsellerini GitHub'dan ve yerel diskten temizle
+      for (final d in deleted) {
+        final sharedByOther = _allProducts.any((p) => p.image == d.image);
+        if (d.image.isNotEmpty &&
+            !d.image.contains('placeholder') &&
+            !sharedByOther) {
+          try {
+            await _githubService.deleteImageFile(repoFilePath: d.image);
+          } catch (_) {}
+        }
+      }
 
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Row(
-                children: [
-                  Icon(Icons.check_circle, color: AppColors.emerald600),
-                  SizedBox(width: 8),
-                  Text('Başarıyla Yayınlandı!'),
-                ],
-              ),
-              content: Text(
-                'Değişiklikler GitHub reposuna ($commitHash) commit edildi.\n'
-                'Siteniz (GitHub Pages) 1-2 dakika içinde güncel verilerle yenilenecektir.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Tamam'),
+      // Yerel ortamda data/products.json dosyası mevcutsa onu da güncelle (desync önlemi)
+      try {
+        final candidates = [
+          File('data/products.json'),
+          File('../data/products.json'),
+          File('../../data/products.json'),
+        ];
+        for (final candidate in candidates) {
+          if (candidate.existsSync()) {
+            const encoder = JsonEncoder.withIndent('  ');
+            final jsonStr = encoder.convert(
+              _allProducts.map((p) => p.toJson()).toList(),
+            );
+            await candidate.writeAsString(jsonStr);
+            break;
+          }
+        }
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() {
+          _isPublishing = false;
+          _deletedProducts.clear();
+          // Başkasının bu arada eklediği ürünleri listeye al
+          _allProducts.addAll(_githubService.lastMergedRemoteAdditions);
+          // Tüm ürünlerin başlangıç durumunu güncelleyerek "Değiştirildi" bayraklarını sıfırla
+          for (final p in _allProducts) {
+            p.commitChanges();
+          }
+        });
+
+        // Ekranı komple silip yeniden yüklemek yerine akıcı ve güvenli SnackBar bildirimi ver
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.emerald700,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Başarıyla GitHub\'a yayınlandı! ($commitHash)${uploadedImagesCount > 0 ? " • $uploadedImagesCount görsel yüklendi" : ""} - Siteniz 1-2 dk içinde güncellenecektir.',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
               ],
             ),
-          );
+          ),
+        );
+
+        // Geliştirici/Test ortamında yayınlama sonrası yerel repoyu otomatik senkronize et
+        if (kDebugMode) {
+          _syncLocalGitPull(isAuto: true);
         }
       }
     } catch (e) {
@@ -254,7 +486,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Yayınlama Hatası'),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Yayınlama Hatası'),
+              ],
+            ),
             content: Text(e.toString().replaceAll('Exception: ', '')),
             actions: [
               TextButton(
@@ -271,10 +512,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
   void _openSettings() {
     showDialog(
       context: context,
-      builder: (ctx) => SettingsDialog(
-        githubService: _githubService,
-        onSaved: _loadProducts,
-      ),
+      builder: (ctx) =>
+          SettingsDialog(githubService: _githubService, onSaved: _loadProducts),
     );
   }
 
@@ -283,7 +522,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
       context: context,
       builder: (ctx) => ProductEditDialog(
         product: product,
+        githubService: _githubService,
         existingCategories: _categories,
+        onDelete: (p) => _deleteProduct(p),
         onSave: (saved) {
           setState(() {
             final index = _allProducts.indexWhere((p) => p.sku == saved.sku);
@@ -300,7 +541,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final modifiedCount = _modifiedProducts.length;
+    final totalChanges = _totalChangesCount;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -315,7 +556,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 color: AppColors.emerald50,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.eco, color: AppColors.emerald700, size: 22),
+              child: const Icon(
+                Icons.eco,
+                color: AppColors.emerald700,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -325,12 +570,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 children: [
                   const Text(
                     'Yıldırımlar Manav - Stok & Fiyat Masası',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     'Repo: ${_githubService.owner}/${_githubService.repo} (${_githubService.branch})',
-                    style: const TextStyle(fontSize: 11, color: Colors.black45, fontFamily: 'monospace'),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.black45,
+                      fontFamily: 'monospace',
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -339,6 +592,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ],
         ),
         actions: [
+          if (kDebugMode)
+            IconButton(
+              icon: _isSyncingGit
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.deepPurple,
+                      ),
+                    )
+                  : const Icon(Icons.sync, size: 20, color: Colors.deepPurple),
+              tooltip: 'Dev: Yerel Git Pull (origin/main senkronizasyonu)',
+              onPressed: _isSyncingGit
+                  ? null
+                  : () => _syncLocalGitPull(isAuto: false),
+            ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.black54),
             tooltip: 'GitHub Bağlantı Ayarları',
@@ -363,11 +633,22 @@ class _InventoryScreenState extends State<InventoryScreen> {
           const SizedBox(width: 8),
 
           FilledButton.icon(
-            onPressed: modifiedCount > 0 && !_isPublishing ? _publishToGitHub : null,
+            onPressed: totalChanges > 0 && !_isPublishing
+                ? _publishToGitHub
+                : null,
             icon: _isPublishing
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                 : const Icon(Icons.cloud_upload_outlined, size: 16),
-            label: Text(modifiedCount > 0 ? 'Yayınla ($modifiedCount)' : 'Yayınla'),
+            label: Text(
+              totalChanges > 0 ? 'Yayınla ($totalChanges)' : 'Yayınla',
+            ),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.emerald700,
             ),
@@ -376,7 +657,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ],
       ),
       body: _buildBody(),
-      bottomNavigationBar: modifiedCount > 0 ? _buildModifiedFloatingBar(modifiedCount) : null,
+      bottomNavigationBar: totalChanges > 0
+          ? _buildModifiedFloatingBar(totalChanges)
+          : null,
     );
   }
 
@@ -451,27 +734,87 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-          child: Row(
-            children: [
-              _buildMetricCard('Toplam Ürün', '$totalCount', Icons.inventory_2_outlined, Colors.blue),
-              const SizedBox(width: 12),
-              _buildMetricCard('Sitede Yayında (Stok > 0)', '$inStockCount', Icons.check_circle_outline, AppColors.emerald600),
-              const SizedBox(width: 12),
-              _buildMetricCard('Tükendi / Sitede Gizli', '$outOfStockCount', Icons.visibility_off_outlined, AppColors.stone600),
-              const SizedBox(width: 12),
-              _buildMetricCard(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final card1 = _buildMetricCard(
+                'Toplam Ürün',
+                '$totalCount',
+                Icons.inventory_2_outlined,
+                Colors.blue,
+              );
+              final card2 = _buildMetricCard(
+                'Sitede Yayında (Stok > 0)',
+                '$inStockCount',
+                Icons.check_circle_outline,
+                AppColors.emerald600,
+              );
+              final card3 = _buildMetricCard(
+                'Tükendi / Sitede Gizli',
+                '$outOfStockCount',
+                Icons.visibility_off_outlined,
+                AppColors.stone600,
+              );
+              final card4 = _buildMetricCard(
                 'Değiştirilen Ürünler',
                 '${_modifiedProducts.length}',
                 Icons.edit_note,
-                _modifiedProducts.isNotEmpty ? Colors.amber.shade800 : Colors.grey,
-              ),
-            ],
+                _modifiedProducts.isNotEmpty
+                    ? Colors.amber.shade800
+                    : Colors.grey,
+              );
+
+              if (constraints.maxWidth >= 950) {
+                return Row(
+                  children: [
+                    Expanded(child: card1),
+                    const SizedBox(width: 12),
+                    Expanded(child: card2),
+                    const SizedBox(width: 12),
+                    Expanded(child: card3),
+                    const SizedBox(width: 12),
+                    Expanded(child: card4),
+                  ],
+                );
+              } else if (constraints.maxWidth >= 550) {
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: card1),
+                        const SizedBox(width: 12),
+                        Expanded(child: card2),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(child: card3),
+                        const SizedBox(width: 12),
+                        Expanded(child: card4),
+                      ],
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    card1,
+                    const SizedBox(height: 8),
+                    card2,
+                    const SizedBox(height: 8),
+                    card3,
+                    const SizedBox(height: 8),
+                    card4,
+                  ],
+                );
+              }
+            },
           ),
         ),
 
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
           child: Card(
             elevation: 0,
             shape: RoundedRectangleBorder(
@@ -480,49 +823,105 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        hintText: 'Stok Kodu (SKU), Ürün veya Kategori ara...',
-                        prefixIcon: Icon(Icons.search, size: 20),
-                        border: InputBorder.none,
-                        isDense: true,
-                      ),
-                      onChanged: (val) => setState(() => _searchQuery = val),
-                    ),
-                  ),
-                  const VerticalDivider(width: 24, thickness: 1),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isCompact = constraints.maxWidth < 850;
 
-                  DropdownButtonHideUnderline(
+                  final searchField = TextField(
+                    decoration: const InputDecoration(
+                      hintText: 'Stok Kodu (SKU), Ürün veya Kategori ara...',
+                      prefixIcon: Icon(Icons.search, size: 20),
+                      border: InputBorder.none,
+                      isDense: true,
+                    ),
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                  );
+
+                  final categoryDropdown = DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _selectedCategory,
+                      isDense: true,
                       icon: const Icon(Icons.filter_list, size: 18),
-                      style: const TextStyle(fontSize: 13, color: Colors.black87),
-                      items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black87,
+                      ),
+                      items: _categories
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(c, overflow: TextOverflow.ellipsis),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (val) {
-                        if (val != null) setState(() => _selectedCategory = val);
+                        if (val != null)
+                          setState(() => _selectedCategory = val);
                       },
                     ),
-                  ),
-                  const SizedBox(width: 12),
+                  );
 
-                  SegmentedButton<String>(
+                  final segmentedFilter = SegmentedButton<String>(
                     segments: const [
-                      ButtonSegment(value: 'all', label: Text('Tümü', style: TextStyle(fontSize: 12))),
-                      ButtonSegment(value: 'in_stock', label: Text('Stokta', style: TextStyle(fontSize: 12))),
-                      ButtonSegment(value: 'out_of_stock', label: Text('Tükenen', style: TextStyle(fontSize: 12))),
-                      ButtonSegment(value: 'modified', label: Text('Değişenler', style: TextStyle(fontSize: 12))),
+                      ButtonSegment(
+                        value: 'all',
+                        label: Text('Tümü', style: TextStyle(fontSize: 12)),
+                      ),
+                      ButtonSegment(
+                        value: 'in_stock',
+                        label: Text('Stokta', style: TextStyle(fontSize: 12)),
+                      ),
+                      ButtonSegment(
+                        value: 'out_of_stock',
+                        label: Text('Tükenen', style: TextStyle(fontSize: 12)),
+                      ),
+                      ButtonSegment(
+                        value: 'modified',
+                        label: Text(
+                          'Değişenler',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
                     ],
                     selected: {_stockFilter},
-                    onSelectionChanged: (val) => setState(() => _stockFilter = val.first),
+                    onSelectionChanged: (val) =>
+                        setState(() => _stockFilter = val.first),
                     style: const ButtonStyle(
                       visualDensity: VisualDensity.compact,
                     ),
-                  ),
-                ],
+                  );
+
+                  if (!isCompact) {
+                    return Row(
+                      children: [
+                        Expanded(flex: 3, child: searchField),
+                        const SizedBox(
+                          height: 24,
+                          child: VerticalDivider(width: 24, thickness: 1),
+                        ),
+                        categoryDropdown,
+                        const SizedBox(width: 12),
+                        segmentedFilter,
+                      ],
+                    );
+                  } else {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        searchField,
+                        const Divider(height: 16, thickness: 1),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          alignment: WrapAlignment.spaceBetween,
+                          children: [categoryDropdown, segmentedFilter],
+                        ),
+                      ],
+                    );
+                  }
+                },
               ),
             ),
           ),
@@ -531,23 +930,47 @@ class _InventoryScreenState extends State<InventoryScreen> {
         Expanded(
           child: _filteredProducts.isEmpty
               ? const Center(
-                  child: Text('Kriterlere uygun ürün bulunamadı.', style: TextStyle(color: Colors.black45)),
+                  child: Text(
+                    'Kriterlere uygun ürün bulunamadı.',
+                    style: TextStyle(color: Colors.black45),
+                  ),
                 )
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 80),
-                  itemCount: _filteredProducts.length,
-                  separatorBuilder: (ctx, i) => const SizedBox(height: 8),
-                  itemBuilder: (ctx, i) => _buildProductRow(_filteredProducts[i]),
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final needsHorizontalScroll = constraints.maxWidth < 900;
+                    final listView = ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 80),
+                      itemCount: _filteredProducts.length,
+                      separatorBuilder: (ctx, i) => const SizedBox(height: 8),
+                      itemBuilder: (ctx, i) =>
+                          _buildProductRow(_filteredProducts[i]),
+                    );
+
+                    if (needsHorizontalScroll) {
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(width: 900, child: listView),
+                      );
+                    }
+                    return listView;
+                  },
                 ),
         ),
       ],
     );
   }
 
-  Widget _buildMetricCard(String label, String value, IconData icon, Color color) {
-    return Expanded(
+  Widget _buildMetricCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Tooltip(
+      message: '$label: $value',
+      waitDuration: const Duration(milliseconds: 500),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
@@ -564,16 +987,32 @@ class _InventoryScreenState extends State<InventoryScreen> {
               child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
-                Text(
-                  value,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 2),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -588,15 +1027,29 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isModified ? Colors.amber.shade50.withValues(alpha: 0.5) : Colors.white,
+        color: isModified
+            ? Colors.amber.shade50.withValues(alpha: 0.5)
+            : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isModified ? Colors.amber.shade300 : (isHidden ? AppColors.stone300 : AppColors.stone200),
+          color: isModified
+              ? Colors.amber.shade300
+              : (isHidden ? AppColors.stone300 : AppColors.stone200),
           width: isModified ? 1.5 : 1,
         ),
       ),
       child: Row(
         children: [
+          // Sabit Boyutlu Kare Görsel Önizleme (Asla Büyümez, Tam Sığar)
+          ProductThumbnail(
+            product: p,
+            githubService: _githubService,
+            size: 42,
+            borderRadius: 8,
+            onTap: () => _openProductEditDialog(p),
+          ),
+          const SizedBox(width: 12),
+
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -605,7 +1058,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
             child: Text(
               p.sku,
-              style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 11),
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
             ),
           ),
           const SizedBox(width: 14),
@@ -617,6 +1074,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
               children: [
                 Text(
                   p.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -625,56 +1084,78 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 Text(
                   '${p.category} • 1 ${p.unit}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11, color: Colors.black45),
                 ),
               ],
             ),
           ),
 
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: p.isInStock ? AppColors.emerald50 : AppColors.stone100,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: p.isInStock ? AppColors.emerald200 : AppColors.stone300,
+          Tooltip(
+            message: p.isInStock ? 'Sitede Yayında' : 'Sitede Gizli (Stok: 0)',
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: p.isInStock ? AppColors.emerald50 : AppColors.stone100,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: p.isInStock
+                      ? AppColors.emerald200
+                      : AppColors.stone300,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    p.isInStock ? Icons.check_circle : Icons.visibility_off,
+                    size: 13,
+                    color: p.isInStock
+                        ? AppColors.emerald700
+                        : AppColors.stone600,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    p.isInStock ? 'Yayında' : 'Gizli (Stok: 0)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: p.isInStock
+                          ? AppColors.emerald800
+                          : AppColors.stone700,
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  p.isInStock ? Icons.check_circle : Icons.visibility_off,
-                  size: 13,
-                  color: p.isInStock ? AppColors.emerald700 : AppColors.stone600,
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  p.isInStock ? 'Sitede Yayında' : 'Sitede Gizli (Stok: 0)',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: p.isInStock ? AppColors.emerald800 : AppColors.stone700,
-                  ),
-                ),
-              ],
-            ),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 14),
 
           SizedBox(
             width: 140,
             child: Row(
               children: [
-                const Text('₺ ', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
+                const Text(
+                  '₺ ',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black54,
+                  ),
+                ),
                 Expanded(
                   child: TextFormField(
                     key: ValueKey('${p.sku}_price_${p.price}'),
                     initialValue: p.price.toStringAsFixed(2),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: const InputDecoration(
                       isDense: true,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
                       border: OutlineInputBorder(),
                     ),
                     onFieldSubmitted: (val) {
@@ -685,11 +1166,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     },
                   ),
                 ),
-                Text(' /${p.unit}', style: const TextStyle(fontSize: 10, color: Colors.black45)),
+                Text(
+                  ' /${p.unit}',
+                  style: const TextStyle(fontSize: 10, color: Colors.black45),
+                ),
               ],
             ),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 14),
 
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -753,14 +1237,25 @@ class _InventoryScreenState extends State<InventoryScreen> {
           if (isModified)
             IconButton(
               icon: const Icon(Icons.undo, size: 18, color: Colors.amber),
-              tooltip: 'Değişikliği Geri Al (Fiyat: ₺${p.initialPrice}, Stok: ${p.initialStock})',
+              tooltip:
+                  'Değişikliği Geri Al (Fiyat: ₺${p.initialPrice}, Stok: ${p.initialStock})',
               onPressed: () => _revertProduct(p),
             ),
 
           IconButton(
-            icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.black45),
+            icon: const Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Colors.black45,
+            ),
             tooltip: 'Ürünü Düzenle',
             onPressed: () => _openProductEditDialog(p),
+          ),
+
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+            tooltip: 'Ürünü Sil',
+            onPressed: () => _deleteProduct(p),
           ),
         ],
       ),
@@ -769,7 +1264,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Widget _buildModifiedFloatingBar(int count) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFF1F2937),
         boxShadow: [
@@ -780,42 +1275,101 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 520;
+
+          final iconWidget = Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: Colors.amber.shade400,
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.edit, size: 16, color: Colors.black87),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              '$count adet üründe henüz yayınlanmamış stok/fiyat değişikliği var.',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+          );
+
+          final textWidget = Text(
+            '$count adet üründe henüz yayınlanmamış değişiklik (ekleme/stok/fiyat/silme) var.',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
             ),
-          ),
-          TextButton(
+          );
+
+          final revertButton = TextButton(
             onPressed: _revertAllChanges,
-            style: TextButton.styleFrom(foregroundColor: AppColors.stone400),
-            child: const Text('Tümünü İptal Et'),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.stone400,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: Text(
+              constraints.maxWidth < 650 ? 'İptal' : 'Tümünü İptal Et',
+            ),
+          );
+
+          final publishButton = ElevatedButton.icon(
             onPressed: _isPublishing ? null : _publishToGitHub,
             icon: _isPublishing
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.cloud_upload, size: 18),
-            label: const Text('GitHub\'a Kaydet ve Sitede Yayınla'),
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.cloud_upload, size: 16),
+            label: Text(
+              constraints.maxWidth < 750
+                  ? 'Yayınla'
+                  : 'GitHub\'a Kaydet ve Sitede Yayınla',
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.emerald600,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             ),
-          ),
-        ],
+          );
+
+          if (!isCompact) {
+            return Row(
+              children: [
+                iconWidget,
+                const SizedBox(width: 10),
+                Expanded(child: textWidget),
+                revertButton,
+                const SizedBox(width: 8),
+                publishButton,
+              ],
+            );
+          } else {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    iconWidget,
+                    const SizedBox(width: 8),
+                    Expanded(child: textWidget),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    revertButton,
+                    const SizedBox(width: 6),
+                    publishButton,
+                  ],
+                ),
+              ],
+            );
+          }
+        },
       ),
     );
   }

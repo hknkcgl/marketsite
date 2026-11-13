@@ -32,8 +32,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
     super.initState();
     _ownerController = TextEditingController(text: widget.githubService.owner);
     _repoController = TextEditingController(text: widget.githubService.repo);
-    _branchController = TextEditingController(text: widget.githubService.branch);
-    _filePathController = TextEditingController(text: widget.githubService.filePath);
+    _branchController = TextEditingController(
+      text: widget.githubService.branch,
+    );
+    _filePathController = TextEditingController(
+      text: widget.githubService.filePath,
+    );
     _tokenController = TextEditingController(text: widget.githubService.token);
   }
 
@@ -66,7 +70,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
         setState(() {
           _isTesting = false;
           _testSuccess = true;
-          _testResult = 'Bağlantı başarılı! ${products.length} adet ürün bulundu.';
+          _testResult =
+              'Bağlantı başarılı! ${products.length} adet ürün bulundu.';
         });
       }
     } catch (e) {
@@ -94,10 +99,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final envPath = widget.githubService.currentEnvFile.path;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 550),
+        constraints: const BoxConstraints(maxWidth: 580),
         child: Padding(
           padding: const EdgeInsets.all(28),
           child: SingleChildScrollView(
@@ -113,7 +120,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         color: AppColors.emerald50,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.settings, color: AppColors.emerald800),
+                      child: const Icon(
+                        Icons.settings,
+                        color: AppColors.emerald800,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     const Expanded(
@@ -122,18 +132,79 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         children: [
                           Text(
                             'GitHub Entegrasyon Ayarları',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           Text(
                             'Ürün ve stok verilerini çekmek ve güncellemek için repo bilgileri',
-                            style: TextStyle(fontSize: 12, color: Colors.black54),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.black54,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
+
+                // .env BİLGİLENDİRME KUTUSU
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.emerald50.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.emerald200),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.folder_outlined,
+                        color: AppColors.emerald700,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Kurulum & .env Dosya Konumu',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.emerald900,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              envPath,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontFamily: 'monospace',
+                                color: Colors.black87,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Uygulama Windows veya başka bir bilgisayara taşındığında, bu dizindeki .env dosyası otomatik okunur ve tüm değişiklikler doğrudan bu dosyaya kaydedilir.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
 
                 // Repo Bilgileri
                 Row(
@@ -142,7 +213,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       child: TextField(
                         controller: _ownerController,
                         decoration: const InputDecoration(
-                          labelText: 'GitHub Kullanıcı Adı / Organizasyon',
+                          labelText: 'GitHub Kullanıcı Adı / Org',
+                          hintText: 'hknkcgl',
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
@@ -154,6 +226,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         controller: _repoController,
                         decoration: const InputDecoration(
                           labelText: 'Repo Adı',
+                          hintText: 'marketsite',
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
@@ -171,6 +244,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         controller: _branchController,
                         decoration: const InputDecoration(
                           labelText: 'Branch (Dal)',
+                          hintText: 'main',
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
@@ -182,7 +256,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       child: TextField(
                         controller: _filePathController,
                         decoration: const InputDecoration(
-                          labelText: 'Dosya Yolu',
+                          labelText: 'Veri Dosya Yolu',
+                          hintText: 'data/products.json',
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
@@ -201,7 +276,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     hintText: 'ghp_xxxxxxxxxxxx veya github_pat_xxxx',
                     border: OutlineInputBorder(),
                     isDense: true,
-                    helperText: 'Stok ve fiyat güncellemelerini push edebilmek için "contents:write" izni gereklidir.',
+                    helperText:
+                        'Stok, fiyat ve ürün görsellerini push edebilmek için repo okuma/yazma yetkisi gereklidir.',
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -213,17 +289,23 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: _testSuccess ? AppColors.emerald50 : Colors.red.shade50,
+                      color: _testSuccess
+                          ? AppColors.emerald50
+                          : Colors.red.shade50,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: _testSuccess ? AppColors.emerald200 : Colors.red.shade200,
+                        color: _testSuccess
+                            ? AppColors.emerald200
+                            : Colors.red.shade200,
                       ),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           _testSuccess ? Icons.check_circle : Icons.error,
-                          color: _testSuccess ? AppColors.emerald700 : Colors.red.shade700,
+                          color: _testSuccess
+                              ? AppColors.emerald700
+                              : Colors.red.shade700,
                           size: 20,
                         ),
                         const SizedBox(width: 10),
@@ -232,7 +314,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
                             _testResult!,
                             style: TextStyle(
                               fontSize: 12,
-                              color: _testSuccess ? AppColors.emerald900 : Colors.red.shade900,
+                              color: _testSuccess
+                                  ? AppColors.emerald900
+                                  : Colors.red.shade900,
                             ),
                           ),
                         ),
@@ -246,8 +330,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   children: [
                     TextButton.icon(
                       onPressed: _isTesting ? null : _testConnection,
-                      icon: _isTesting 
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      icon: _isTesting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
                           : const Icon(Icons.sync_alt, size: 18),
                       label: const Text('Bağlantıyı Test Et'),
                     ),
@@ -263,9 +351,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.emerald700,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
                           ),
-                          child: const Text('Kaydet'),
+                          child: const Text('Kaydet (.env)'),
                         ),
                       ],
                     ),

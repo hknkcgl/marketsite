@@ -3,7 +3,7 @@
  * Mobil cihazlarda doğrudan WhatsApp uygulamasını, masaüstünde QR kod modalını açar.
  */
 
-const WHATSAPP_PHONE = '905320000000'; // İşletme WhatsApp Hattı (90 formatında)
+const WHATSAPP_PHONE = '905435533717'; // İşletme WhatsApp Hattı (90 formatında)
 
 class WhatsAppOrderService {
   constructor() {

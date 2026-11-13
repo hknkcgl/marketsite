@@ -23,10 +23,7 @@ class YildirimlarAdminApp extends StatelessWidget {
         ),
         fontFamily: '-apple-system',
         scaffoldBackgroundColor: const Color(0xFFF9FAFB),
-        cardTheme: const CardThemeData(
-          elevation: 0,
-          color: Colors.white,
-        ),
+        cardTheme: const CardThemeData(elevation: 0, color: Colors.white),
       ),
       home: const InventoryScreen(),
     );

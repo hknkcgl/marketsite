@@ -163,11 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <!-- Resim Alanı & Rozetler -->
             <div class="relative w-full aspect-square rounded-2xl bg-stone-100 overflow-hidden mb-3">
               <img 
-                src="assets/images/products/${p.sku}.svg" 
+                src="${p.image || `assets/images/products/${p.sku}.svg`}" 
                 alt="${p.name}" 
                 class="product-card-img w-full h-full object-cover"
                 loading="lazy"
-                onerror="this.onerror=null; this.src='assets/images/products/placeholder.svg';"
+                onerror="if (!this.dataset.triedSvg) { this.dataset.triedSvg = 'true'; this.src = 'assets/images/products/${p.sku}.svg'; } else { this.onerror = null; this.src = 'assets/images/products/placeholder.svg'; }"
               >
 
               <!-- Kategori Rozeti -->
@@ -289,10 +289,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <!-- Görsel -->
           <div class="w-14 h-14 rounded-xl bg-stone-100 flex-shrink-0 overflow-hidden border border-stone-200">
             <img 
-              src="assets/images/products/${item.sku}.svg" 
+              src="${item.image || `assets/images/products/${item.sku}.svg`}" 
               alt="${item.name}" 
               class="w-full h-full object-cover"
-              onerror="this.onerror=null; this.src='assets/images/products/placeholder.svg';"
+              onerror="if (!this.dataset.triedSvg) { this.dataset.triedSvg = 'true'; this.src = 'assets/images/products/${item.sku}.svg'; } else { this.onerror = null; this.src = 'assets/images/products/placeholder.svg'; }"
             >
           </div>
 
