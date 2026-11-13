@@ -4,8 +4,6 @@
  */
 
 const CART_STORAGE_KEY = 'yildirimlar_manav_cart_v1';
-const FREE_DELIVERY_THRESHOLD = 250.00; // 250 TL üzeri ücretsiz teslimat
-const STANDARD_DELIVERY_FEE = 35.00;   // Altında 35 TL teslimat
 
 class CartManager {
   constructor() {
@@ -119,23 +117,13 @@ class CartManager {
     const totalItemsCount = this.items.reduce((sum, item) => sum + item.quantity, 0);
     const subtotal = this.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
-    // 250 TL üzeri ücretsiz teslimat
-    const isFreeDelivery = subtotal >= FREE_DELIVERY_THRESHOLD || subtotal === 0;
-    const deliveryFee = isFreeDelivery ? 0 : STANDARD_DELIVERY_FEE;
-    const grandTotal = subtotal + deliveryFee;
-
-    const remainingForFreeDelivery = Math.max(0, FREE_DELIVERY_THRESHOLD - subtotal);
-    const freeDeliveryProgress = Math.min(100, Math.round((subtotal / FREE_DELIVERY_THRESHOLD) * 100));
+    const grandTotal = subtotal;
 
     return {
       items: this.items,
       totalItemsCount,
       subtotal,
-      deliveryFee,
-      isFreeDelivery,
-      grandTotal,
-      remainingForFreeDelivery,
-      freeDeliveryProgress
+      grandTotal
     };
   }
 

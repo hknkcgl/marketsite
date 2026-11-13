@@ -38,7 +38,6 @@ class WhatsAppOrderService {
 
     lines.push(`--------------------------------------`);
     lines.push(`💵 *Ara Toplam:* ${summary.subtotal.toFixed(2)} ₺`);
-    lines.push(`🚚 *Teslimat:* ${summary.deliveryFee === 0 ? 'Ücretsiz' : summary.deliveryFee.toFixed(2) + ' ₺'}`);
     lines.push(`💰 *GENEL TOPLAM:* ${summary.grandTotal.toFixed(2)} ₺`);
     lines.push(``);
     lines.push(`📍 *Müşteri & Teslimat Bilgileri:*`);

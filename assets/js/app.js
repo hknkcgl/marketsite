@@ -34,11 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const cartHeaderTotal = document.getElementById('cartHeaderTotal');
   const cartItemsCountText = document.getElementById('cartItemsCountText');
   const cartSubtotal = document.getElementById('cartSubtotal');
-  const cartDeliveryFee = document.getElementById('cartDeliveryFee');
   const cartGrandTotal = document.getElementById('cartGrandTotal');
-  const deliveryProgressBar = document.getElementById('deliveryProgressBar');
-  const deliveryMeterText = document.getElementById('deliveryMeterText');
-  const deliveryRemainingText = document.getElementById('deliveryRemainingText');
 
   // Form Elemanları
   const customerName = document.getElementById('customerName');
@@ -260,16 +256,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     cartItemsCountText.textContent = `${summary.totalItemsCount} ürün seçildi`;
 
-    // 2. Ücretsiz Teslimat Çubuğu
-    deliveryProgressBar.style.width = `${summary.freeDeliveryProgress}%`;
-    if (summary.isFreeDelivery) {
-      deliveryMeterText.textContent = '🎉 Tebrikler! Ücretsiz teslimat kazandınız.';
-      deliveryRemainingText.textContent = '';
-    } else {
-      deliveryMeterText.textContent = `Ücretsiz teslimat için:`;
-      deliveryRemainingText.textContent = `${summary.remainingForFreeDelivery.toFixed(2)} ₺ kaldı`;
-    }
-
     // 3. Boş Sepet vs Dolu Sepet
     if (summary.items.length === 0) {
       cartItemsList.classList.add('hidden');
@@ -357,7 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 5. Toplam Rakamları Güncelle
     cartSubtotal.textContent = `${summary.subtotal.toFixed(2)} ₺`;
-    cartDeliveryFee.textContent = summary.deliveryFee === 0 ? 'Ücretsiz' : `${summary.deliveryFee.toFixed(2)} ₺`;
     cartGrandTotal.textContent = `${summary.grandTotal.toFixed(2)} ₺`;
 
     submitOrderBtn.innerHTML = `
